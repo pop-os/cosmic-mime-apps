@@ -69,15 +69,19 @@ pub fn list_paths() -> Vec<PathBuf> {
     paths
 }
 
+/// Returns `~/.config/${XDG_CURRENT_DESKTOP}-mimeapps.list` if it exists,
+/// otherwise `~/.config/mimeapps.list`.
 pub fn local_list_path() -> Option<PathBuf> {
-    std::env::var("XDG_CURRENT_DESKTOP")
+    let base_dirs = xdg::BaseDirectories::new().ok()?;
+    let home = base_dirs.get_config_home();
+
+    let path = std::env::var("XDG_CURRENT_DESKTOP")
         .ok()
-        .map(|de| [&de.to_ascii_lowercase(), "-mimeapps.list"].concat())
-        .and_then(|list_name| {
-            xdg::BaseDirectories::new()
-                .ok()
-                .map(|base_dirs| base_dirs.get_config_home().join(list_name))
-        })
+        .map(|de| home.join([&de.to_ascii_lowercase(), "mimeapps.list"].concat()))
+        .filter(|de| de.exists())
+        .unwrap_or_else(|| home.join("mimeapps.list"));
+
+    Some(path)
 }
 
 fn apply_existing_paths(
