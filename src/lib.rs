@@ -77,7 +77,7 @@ pub fn local_list_path() -> Option<PathBuf> {
 
     let path = std::env::var("XDG_CURRENT_DESKTOP")
         .ok()
-        .map(|de| home.join([&de.to_ascii_lowercase(), "mimeapps.list"].concat()))
+        .map(|de| home.join([&de.to_ascii_lowercase(), "-mimeapps.list"].concat()))
         .filter(|de| de.exists())
         .unwrap_or_else(|| home.join("mimeapps.list"));
 
