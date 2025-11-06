@@ -16,12 +16,12 @@ pub fn by_app() -> BTreeMap<Arc<str>, Arc<App>> {
     let mut associations = BTreeMap::new();
 
     for desktop_entry in desktop_entries {
-        let mime_types = desktop_entry.mime_type().unwrap_or_else(|| Vec::new());
+        let mime_types = desktop_entry.mime_type().unwrap_or_else(Vec::new);
 
         if let Some(name) = desktop_entry.name(&locales) {
             let mut app = App {
                 appid: desktop_entry.appid.to_owned().into(),
-                name: name.to_owned().into(),
+                name: name.into_owned().into(),
                 icon: desktop_entry.icon().unwrap_or("").to_owned().into(),
                 path: desktop_entry.path.to_owned().into(),
                 mime_types: mime_types

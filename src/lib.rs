@@ -26,7 +26,7 @@ pub fn apps_for_mime<'a>(
 }
 
 /// Known mime-types which have configured applications
-pub fn configured_mime_types<'a>(apps: &'a BTreeMap<Arc<str>, Arc<App>>) -> BTreeSet<Mime> {
+pub fn configured_mime_types(apps: &BTreeMap<Arc<str>, Arc<App>>) -> BTreeSet<Mime> {
     let mut bset = BTreeSet::new();
 
     apps.iter().for_each(|(_, app)| {
