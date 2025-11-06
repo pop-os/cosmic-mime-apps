@@ -9,52 +9,51 @@ use std::io::BufReader;
 
 pub fn mime_types() -> BTreeSet<Mime> {
     let mut mime_types = BTreeSet::new();
+    let base_dirs = xdg::BaseDirectories::new();
 
-    if let Ok(base_dirs) = xdg::BaseDirectories::new() {
-        for data_dir in base_dirs.get_data_dirs() {
-            let packages_dir = data_dir.join("mime/packages");
+    for data_dir in base_dirs.get_data_dirs() {
+        let packages_dir = data_dir.join("mime/packages");
 
-            let Ok(packages_dir) = packages_dir.read_dir() else {
+        let Ok(packages_dir) = packages_dir.read_dir() else {
+            continue;
+        };
+
+        for entry in packages_dir.filter_map(Result::ok) {
+            let Ok(file) = std::fs::File::open(entry.path()) else {
                 continue;
             };
 
-            for entry in packages_dir.filter_map(Result::ok) {
-                let Ok(file) = std::fs::File::open(entry.path()) else {
-                    continue;
-                };
+            let mut reader = Reader::from_reader(BufReader::new(file));
+            reader.config_mut().trim_text(true);
 
-                let mut reader = Reader::from_reader(BufReader::new(file));
-                reader.config_mut().trim_text(true);
+            let mut buffer = Vec::new();
 
-                let mut buffer = Vec::new();
+            loop {
+                buffer.clear();
+                match reader.read_event_into(&mut buffer) {
+                    Ok(Event::Start(tag_start)) => {
+                        if tag_start.name().as_ref() != b"mime-type" {
+                            continue;
+                        }
 
-                loop {
-                    buffer.clear();
-                    match reader.read_event_into(&mut buffer) {
-                        Ok(Event::Start(tag_start)) => {
-                            if tag_start.name().as_ref() != b"mime-type" {
+                        for attribute in tag_start.attributes().filter_map(Result::ok) {
+                            if attribute.key.as_ref() != b"type" {
                                 continue;
                             }
 
-                            for attribute in tag_start.attributes().filter_map(Result::ok) {
-                                if attribute.key.as_ref() != b"type" {
-                                    continue;
-                                }
+                            let Ok(value) = attribute.unescape_value() else {
+                                continue;
+                            };
 
-                                let Ok(value) = attribute.unescape_value() else {
-                                    continue;
-                                };
-
-                                if let Ok(mime) = value.parse() {
-                                    mime_types.insert(mime);
-                                }
+                            if let Ok(mime) = value.parse() {
+                                mime_types.insert(mime);
                             }
                         }
-
-                        Ok(Event::Eof) | Err(_) => break,
-
-                        _ => continue,
                     }
+
+                    Ok(Event::Eof) | Err(_) => break,
+
+                    _ => continue,
                 }
             }
         }

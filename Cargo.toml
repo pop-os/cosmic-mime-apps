@@ -2,11 +2,11 @@
 name = "cosmic-mime-apps"
 description = "Parse and update xdg mimeapps.list files to manage default apps"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 license = "MPL-2.0"
 
 [dependencies]
-freedesktop-desktop-entry = "0.7.8"
+freedesktop-desktop-entry = "0.7.19"
 mime = "0.3.17"
-quick-xml = "0.37.1"
-xdg = "2.5.2"
+quick-xml = "0.38"
+xdg = "3.0"

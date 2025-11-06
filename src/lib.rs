@@ -46,24 +46,23 @@ pub fn list_paths() -> Vec<PathBuf> {
     let desktop_filename = std::env::var("XDG_CURRENT_DESKTOP")
         .ok()
         .map(|de| [&de.to_ascii_lowercase(), "-mimeapps.list"].concat());
-
     let desktop_filename = desktop_filename.as_deref();
-
     let mut paths = Vec::with_capacity(8);
+    let base_dirs = xdg::BaseDirectories::new();
 
-    if let Ok(base_dirs) = xdg::BaseDirectories::new() {
-        // user overrides
-        paths = apply_existing_paths(paths, base_dirs.get_config_home(), desktop_filename);
+    // user overrides
+    if let Some(config_home) = base_dirs.get_config_home() {
+        paths = apply_existing_paths(paths, config_home, desktop_filename);
+    }
 
-        // sysadmin and ISV overrides
-        for config_dir in base_dirs.get_config_dirs() {
-            paths = apply_existing_paths(paths, config_dir, desktop_filename)
-        }
+    // sysadmin and ISV overrides
+    for config_dir in base_dirs.get_config_dirs() {
+        paths = apply_existing_paths(paths, config_dir, desktop_filename)
+    }
 
-        // distribution-provided defaults
-        for data_dir in base_dirs.get_data_dirs() {
-            paths = apply_existing_paths(paths, data_dir.join("applications"), desktop_filename)
-        }
+    // distribution-provided defaults
+    for data_dir in base_dirs.get_data_dirs() {
+        paths = apply_existing_paths(paths, data_dir.join("applications"), desktop_filename)
     }
 
     paths
@@ -72,8 +71,8 @@ pub fn list_paths() -> Vec<PathBuf> {
 /// Returns `~/.config/${XDG_CURRENT_DESKTOP}-mimeapps.list` if it exists,
 /// otherwise `~/.config/mimeapps.list`.
 pub fn local_list_path() -> Option<PathBuf> {
-    let base_dirs = xdg::BaseDirectories::new().ok()?;
-    let home = base_dirs.get_config_home();
+    let base_dirs = xdg::BaseDirectories::new();
+    let home = base_dirs.get_config_home()?;
 
     let path = std::env::var("XDG_CURRENT_DESKTOP")
         .ok()
