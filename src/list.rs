@@ -18,7 +18,7 @@ impl List {
             .and_modify(|associations| {
                 associations.clear();
             })
-            .or_insert_with(|| Vec::new())
+            .or_default()
             .push(app.into());
     }
 
@@ -62,7 +62,7 @@ impl List {
                 Ast::DefaultApp(mime, apps) => (&mut self.default_apps, mime, apps),
             };
 
-            if let Some(mime) = mime.parse::<Mime>().ok() {
+            if let Ok(mime) = mime.parse::<Mime>() {
                 map.entry(mime).or_insert_with(|| {
                     apps.split(';')
                         .filter(|app| !app.is_empty())
@@ -102,30 +102,29 @@ impl List {
     }
 }
 
-impl ToString for List {
-    fn to_string(&self) -> String {
-        let mut output = String::new();
-
-        for (name, map) in &[
+impl std::fmt::Display for List {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let sections = &[
             ("[Default Applications]", &self.default_apps),
-            ("\n\n[Added Associations]", &self.added_associations),
-            ("\n\n[Removed Associations]", &self.removed_associations),
-        ] {
-            if map.is_empty() {
-                continue;
-            }
+            ("[Added Associations]", &self.added_associations),
+            ("[Removed Associations]", &self.removed_associations),
+        ];
 
-            output.push_str(name);
+        let content = sections
+            .iter()
+            .filter(|(_, map)| !map.is_empty())
+            .map(|(name, map)| {
+                let entries = map
+                    .iter()
+                    .map(|(mime, apps)| format!("{}={}", mime.essence_str(), apps.join(";")))
+                    .collect::<Vec<String>>()
+                    .join("\n");
+                format!("{}\n{}", name, entries)
+            })
+            .collect::<Vec<String>>()
+            .join("\n\n");
 
-            map.iter().for_each(|(mime, apps)| {
-                output.push('\n');
-                output.push_str(mime.essence_str());
-                output.push('=');
-                output.push_str(&*apps.join(";"));
-            });
-        }
-
-        output
+        write!(f, "{}", content)
     }
 }
 
@@ -173,14 +172,14 @@ impl<'a> Iterator for Iter<'a> {
                         continue;
                     }
 
-                    if let Some(property) = self.active_property {
-                        if let Some((mime, apps)) = handler.split_once('=') {
-                            return Some(match property {
-                                AstMap::AddedAssociations => Ast::AddAssociation(mime, apps),
-                                AstMap::DefaultApplications => Ast::DefaultApp(mime, apps),
-                                AstMap::RemovedAssociations => Ast::RemoveAssociation(mime, apps),
-                            });
-                        }
+                    if let Some(property) = self.active_property
+                        && let Some((mime, apps)) = handler.split_once('=')
+                    {
+                        return Some(match property {
+                            AstMap::AddedAssociations => Ast::AddAssociation(mime, apps),
+                            AstMap::DefaultApplications => Ast::DefaultApp(mime, apps),
+                            AstMap::RemovedAssociations => Ast::RemoveAssociation(mime, apps),
+                        });
                     }
                 }
             }
