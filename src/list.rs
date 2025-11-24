@@ -172,8 +172,8 @@ impl<'a> Iterator for Iter<'a> {
                         continue;
                     }
 
-                    if let Some(property) = self.active_property
-                        && let Some((mime, apps)) = handler.split_once('=')
+                    if let Some((property, (mime, apps))) =
+                        self.active_property.zip(handler.split_once('='))
                     {
                         return Some(match property {
                             AstMap::AddedAssociations => Ast::AddAssociation(mime, apps),
