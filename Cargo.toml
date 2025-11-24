@@ -4,6 +4,7 @@ description = "Parse and update xdg mimeapps.list files to manage default apps"
 version = "0.1.0"
 edition = "2024"
 license = "MPL-2.0"
+rust-version = "1.85"
 
 [dependencies]
 freedesktop-desktop-entry = "0.7.19"
