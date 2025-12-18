@@ -109,3 +109,40 @@ fn apply_existing_paths(
 
     paths
 }
+
+#[cfg(test)]
+mod test {
+    use mime::Mime;
+
+    use crate::List;
+
+    #[test]
+    fn can_load_multiple_mimeapps_files() {
+        let mut list = List::default();
+        let paths = vec!["fixtures/mimeapps-1.list", "fixtures/mimeapps-2.list"];
+
+        list.load_from_paths(&paths);
+
+        assert_eq!(list.default_apps.len(), 3);
+        assert_eq!(list.added_associations.len(), 3);
+        assert_eq!(list.removed_associations.len(), 3);
+    }
+
+    #[test]
+    fn can_parse_mime_type() {
+        let mut list = List::default();
+        let paths = vec!["fixtures/mimeapps-1.list"];
+
+        list.load_from_paths(&paths);
+
+        assert_eq!(list.default_apps.len(), 2);
+
+        let text_plain = "text/plain".parse::<Mime>().unwrap();
+        let default_apps = list.default_app_for(&text_plain).unwrap();
+        assert_eq!(default_apps.len(), 1);
+        assert_eq!(
+            default_apps[0].to_string(),
+            "com.system76.CosmicEdit.desktop"
+        );
+    }
+}

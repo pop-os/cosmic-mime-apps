@@ -1,0 +1,9 @@
+[Default Applications]
+text/plain=com.system76.CosmicEdit.desktop
+text/css=com.system76.CosmicEdit.desktop
+[Added Associations]
+text/plain=com.system76.CosmicEdit.desktop
+text/css=com.system76.CosmicEdit.desktop
+[Removed Associations]
+text/plain=com.system76.CosmicEdit.desktop
+text/css=com.system76.CosmicEdit.desktop

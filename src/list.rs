@@ -1,6 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: MPL-2.0
 
+use freedesktop_desktop_entry::{Line, parse_line};
 use mime::Mime;
 use std::{collections::BTreeMap, io::Read, path::Path, str::Lines};
 
@@ -155,26 +156,19 @@ impl<'a> Iterator for Iter<'a> {
         loop {
             let line = self.lines.next()?.trim();
 
-            if line.is_empty() {
-                continue;
-            }
-
-            match line {
-                "[Default Applications]" => {
-                    self.active_property = Some(AstMap::DefaultApplications)
-                }
-                "[Added Associations]" => self.active_property = Some(AstMap::AddedAssociations),
-                "[Removed Associations]" => {
-                    self.active_property = Some(AstMap::RemovedAssociations)
-                }
-                handler => {
-                    if handler.starts_with("#") {
-                        continue;
+            match parse_line(line) {
+                Ok(Line::Group(group)) => match group {
+                    "Default Applications" => {
+                        self.active_property = Some(AstMap::DefaultApplications)
                     }
-
-                    if let Some((property, (mime, apps))) =
-                        self.active_property.zip(handler.split_once('='))
-                    {
+                    "Added Associations" => self.active_property = Some(AstMap::AddedAssociations),
+                    "Removed Associations" => {
+                        self.active_property = Some(AstMap::RemovedAssociations)
+                    }
+                    _ => self.active_property = None,
+                },
+                Ok(Line::Entry(mime, apps)) => {
+                    if let Some(property) = self.active_property {
                         return Some(match property {
                             AstMap::AddedAssociations => Ast::AddAssociation(mime, apps),
                             AstMap::DefaultApplications => Ast::DefaultApp(mime, apps),
@@ -182,6 +176,7 @@ impl<'a> Iterator for Iter<'a> {
                         });
                     }
                 }
+                _ => (),
             }
         }
     }
