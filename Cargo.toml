@@ -7,7 +7,7 @@ license = "MPL-2.0"
 rust-version = "1.85"
 
 [dependencies]
-freedesktop-desktop-entry = "0.7.19"
+freedesktop-desktop-entry = "0.8.1"
 mime = "0.3.17"
 quick-xml = "0.38"
 xdg = "3.0"
