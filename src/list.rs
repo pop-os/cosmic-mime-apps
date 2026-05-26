@@ -101,6 +101,43 @@ impl List {
             }
         }
     }
+
+    /// Append and overwrite associations from another list.
+    ///
+    /// Use this to merge local mimeapps rules over the system mimeapps rules.
+    pub fn merge_with(&mut self, other: &List) {
+        for (added_mime, added_apps) in &other.added_associations {
+            if let Some(apps) = self.removed_associations.get_mut(added_mime) {
+                apps.retain(|app| !added_apps.contains(app));
+            }
+
+            let list = self
+                .added_associations
+                .entry(added_mime.clone())
+                .or_default();
+
+            list.extend_from_slice(added_apps);
+            list.dedup();
+        }
+
+        for (removed_mime, removed_apps) in &other.removed_associations {
+            if let Some(apps) = self.added_associations.get_mut(removed_mime) {
+                apps.retain(|app| !removed_apps.contains(app));
+            }
+            let list = self
+                .removed_associations
+                .entry(removed_mime.clone())
+                .or_default();
+            list.extend_from_slice(removed_apps);
+            list.dedup();
+        }
+
+        for (default_mime, default_apps) in &other.default_apps {
+            let list = self.default_apps.entry(default_mime.clone()).or_default();
+            list.extend_from_slice(default_apps);
+            list.dedup();
+        }
+    }
 }
 
 impl std::fmt::Display for List {
