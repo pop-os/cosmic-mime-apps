@@ -17,6 +17,8 @@ use std::{
     path::PathBuf,
     sync::Arc,
 };
+#[cfg(feature = "tokio")]
+use tokio::fs::File;
 
 pub fn apps_for_mime<'a>(
     mime: &'a Mime,
@@ -81,6 +83,65 @@ pub fn local_list_path() -> Option<PathBuf> {
         .unwrap_or_else(|| home.join("mimeapps.list"));
 
     Some(path)
+}
+
+/// Copy the existing mimeapps if this is not found. Create an empty file if neither exists.
+#[cfg(feature = "tokio")]
+pub async fn load_user_mimeapps() -> std::io::Result<(List, File)> {
+    use std::io::SeekFrom;
+    use tokio::io::{AsyncReadExt, AsyncSeekExt};
+
+    let base_dirs = xdg::BaseDirectories::new();
+    let Some(home) = base_dirs.get_config_home() else {
+        return Err(std::io::Error::other("XDG config home not set"));
+    };
+
+    let Ok(desktop) = std::env::var("XDG_CURRENT_DESKTOP") else {
+        return Err(std::io::Error::other("XDG_CURRENT_DESKTOP unset"));
+    };
+
+    let default_mimeapps = &*home.join("mimeapps.list");
+    let desktop_mimeapps = &*home.join([&desktop.to_ascii_lowercase(), "-mimeapps.list"].concat());
+
+    let mut mimeapps_file = if desktop_mimeapps.exists() {
+        tokio::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&desktop_mimeapps)
+            .await?
+    } else {
+        let desktop_mimeapps_fut = File::create_new(&desktop_mimeapps);
+        if default_mimeapps.exists() {
+            let (mut default_file, mut desktop_file) =
+                futures_util::future::try_join(File::open(&default_mimeapps), desktop_mimeapps_fut)
+                    .await?;
+
+            if let Ok(length) = default_file.metadata().await.map(|m| m.len()) {
+                _ = desktop_file.set_len(length).await;
+            }
+
+            tokio::io::copy(&mut default_file, &mut desktop_file).await?;
+            desktop_file.seek(SeekFrom::Current(0)).await?;
+            desktop_file
+        } else {
+            File::create_new(&desktop_mimeapps).await?
+        }
+    };
+
+    let capacity = mimeapps_file
+        .metadata()
+        .await
+        .ok()
+        .and_then(|m| usize::try_from(m.len()).ok())
+        .unwrap_or_default();
+
+    let mut buffer = String::with_capacity(capacity);
+    mimeapps_file.read_to_string(&mut buffer).await?;
+    mimeapps_file.seek(SeekFrom::Start(0)).await?;
+
+    let mut list = List::default();
+    list.load_from(&buffer);
+    Ok((list, mimeapps_file))
 }
 
 fn apply_existing_paths(
