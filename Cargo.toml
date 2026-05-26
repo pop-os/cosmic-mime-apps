@@ -1,7 +1,7 @@
 [package]
 name = "cosmic-mime-apps"
 description = "Parse and update xdg mimeapps.list files to manage default apps"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "MPL-2.0"
 rust-version = "1.85"
